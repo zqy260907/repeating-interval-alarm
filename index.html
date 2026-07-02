@@ -18,19 +18,29 @@
         </div>
 
         <form id="alarmForm" class="settings-grid">
-          <label class="field">
+          <label class="field compact-field">
             <span>间隔时间（秒）</span>
             <input id="intervalSeconds" name="intervalSeconds" type="number" min="0.1" step="0.1" value="5" required />
           </label>
 
-          <label class="field">
+          <label class="field compact-field">
             <span>响铃时长（秒）</span>
             <input id="ringDurationSeconds" name="ringDurationSeconds" type="number" min="0.1" step="0.1" value="2" required />
           </label>
 
-          <label class="field">
+          <label class="field compact-field">
             <span>重复次数</span>
             <input id="repeatCount" name="repeatCount" type="number" step="1" value="5" required />
+          </label>
+
+          <label class="field compact-field">
+            <span>铃声</span>
+            <select id="soundPreset" name="soundPreset">
+              <option value="candy">糖果铃</option>
+              <option value="starlight">星星铃</option>
+              <option value="bubble">泡泡铃</option>
+              <option value="classic">经典铃</option>
+            </select>
           </label>
 
           <label class="toggle-row">
@@ -42,15 +52,21 @@
         <div id="errorMessage" class="error-message" role="alert"></div>
 
         <div class="button-row">
-          <button id="startButton" class="primary-button" type="button">开始</button>
-          <button id="stopButton" class="secondary-button" type="button">停止</button>
+          <button id="startButton" class="primary-button" type="button">开始闹钟</button>
         </div>
       </section>
 
       <section class="status-panel" aria-label="当前闹钟状态">
         <div id="ringIndicator" class="ring-indicator" data-ringing="false">
-          <div class="pulse"></div>
+          <div class="pulse" aria-hidden="true">
+            <span></span>
+          </div>
           <strong id="ringText">等待开始</strong>
+        </div>
+
+        <div class="live-actions">
+          <button id="stopButton" class="secondary-button" type="button" disabled>停止闹钟</button>
+          <span id="feedbackText" class="feedback-text">设置好后点击开始</span>
         </div>
 
         <dl class="stats-grid">
