@@ -1,0 +1,11 @@
+{
+  "name": "repeating-interval-alarm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 5173",
+    "test": "node --test",
+    "check": "npm test"
+  }
+}

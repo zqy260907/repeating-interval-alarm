@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>循环闹钟</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="control-panel" aria-label="循环闹钟控制面板">
+        <div class="title-row">
+          <div>
+            <p class="eyebrow">Repeating Interval Alarm</p>
+            <h1>循环闹钟</h1>
+          </div>
+          <span id="statusBadge" class="status-badge" data-status="idle">IDLE</span>
+        </div>
+
+        <form id="alarmForm" class="settings-grid">
+          <label class="field">
+            <span>间隔时间（秒）</span>
+            <input id="intervalSeconds" name="intervalSeconds" type="number" min="0.1" step="0.1" value="5" required />
+          </label>
+
+          <label class="field">
+            <span>响铃时长（秒）</span>
+            <input id="ringDurationSeconds" name="ringDurationSeconds" type="number" min="0.1" step="0.1" value="2" required />
+          </label>
+
+          <label class="field">
+            <span>重复次数</span>
+            <input id="repeatCount" name="repeatCount" type="number" step="1" value="5" required />
+          </label>
+
+          <label class="toggle-row">
+            <input id="infiniteMode" name="infiniteMode" type="checkbox" />
+            <span>无限循环</span>
+          </label>
+        </form>
+
+        <div id="errorMessage" class="error-message" role="alert"></div>
+
+        <div class="button-row">
+          <button id="startButton" class="primary-button" type="button">开始</button>
+          <button id="stopButton" class="secondary-button" type="button">停止</button>
+        </div>
+      </section>
+
+      <section class="status-panel" aria-label="当前闹钟状态">
+        <div id="ringIndicator" class="ring-indicator" data-ringing="false">
+          <div class="pulse"></div>
+          <strong id="ringText">等待开始</strong>
+        </div>
+
+        <dl class="stats-grid">
+          <div>
+            <dt>已响铃</dt>
+            <dd id="completedCount">0</dd>
+          </div>
+          <div>
+            <dt>剩余次数</dt>
+            <dd id="remainingCount">-</dd>
+          </div>
+          <div>
+            <dt>下一次</dt>
+            <dd id="nextRingIn">-</dd>
+          </div>
+          <div>
+            <dt>当前周期</dt>
+            <dd id="cycleLabel">未启动</dd>
+          </div>
+        </dl>
+
+        <ol id="eventLog" class="event-log" aria-label="事件记录"></ol>
+      </section>
+    </main>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
