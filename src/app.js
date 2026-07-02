@@ -2,7 +2,7 @@ import { AlarmStatus, RepeatingAlarm } from "./repeatingAlarm.js";
 
 const elements = {
   form: document.querySelector("#alarmForm"),
-  intervalSeconds: document.querySelector("#intervalSeconds"),
+  intervalMinutes: document.querySelector("#intervalMinutes"),
   ringDurationSeconds: document.querySelector("#ringDurationSeconds"),
   repeatCount: document.querySelector("#repeatCount"),
   soundPreset: document.querySelector("#soundPreset"),
@@ -59,8 +59,14 @@ elements.stopButton.addEventListener("click", () => {
 });
 
 function createAlarm() {
+  const intervalMinutes = Number(elements.intervalMinutes.value);
+
+  if (!Number.isFinite(intervalMinutes) || intervalMinutes <= 0) {
+    throw new Error("间隔时间必须大于 0 分钟");
+  }
+
   const config = {
-    intervalSeconds: elements.intervalSeconds.value,
+    intervalSeconds: intervalMinutes * 60,
     ringDurationSeconds: elements.ringDurationSeconds.value,
     repeatCount: elements.infiniteMode.checked ? -1 : Number(elements.repeatCount.value)
   };
