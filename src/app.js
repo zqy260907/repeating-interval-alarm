@@ -30,18 +30,23 @@ elements.infiniteMode.addEventListener("change", () => {
   elements.repeatCount.value = elements.infiniteMode.checked ? "-1" : "5";
 });
 
-elements.startButton.addEventListener("click", () => {
+elements.startButton.addEventListener("click", async () => {
   try {
     clearError();
+    elements.startButton.disabled = true;
+    elements.startButton.textContent = "正在准备铃声…";
     soundPlayer.stop();
     alarm?.stop();
+    await soundPlayer.unlock();
     alarm = createAlarm();
     alarm.start();
     elements.startButton.textContent = "已开始";
     elements.startButton.dataset.active = "true";
     logEvent("任务已启动");
   } catch (error) {
+    soundPlayer.stop();
     elements.startButton.dataset.active = "false";
+    elements.startButton.disabled = false;
     elements.startButton.textContent = "开始闹钟";
     showError(error.message);
   }
@@ -80,7 +85,10 @@ function createAlarm() {
     onRingStart: (snapshot) => {
       updateView(snapshot);
       stopCountdown();
-      soundPlayer.start(elements.soundPreset.value);
+      soundPlayer.start(elements.soundPreset.value).catch(() => {
+        showError("铃声播放失败，请保持页面在前台并再次点击“开始闹钟”");
+        logEvent("铃声播放失败");
+      });
       logEvent(`第 ${snapshot.completedCount + 1} 次响铃开始`);
     },
     onRingStop: (snapshot) => {
@@ -226,20 +234,38 @@ class AlarmSoundPlayer {
     this.timers = [];
   }
 
-  start(presetName) {
-    this.stop();
-
+  async unlock() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
 
     if (!AudioContext) {
-      return;
+      throw new Error("当前浏览器不支持网页铃声，请更换 Safari 或 Chrome");
     }
 
-    this.audioContext = this.audioContext ?? new AudioContext();
-
-    if (this.audioContext.state === "suspended") {
-      this.audioContext.resume();
+    if (!this.audioContext || this.audioContext.state === "closed") {
+      this.audioContext = new AudioContext();
     }
+
+    // iOS/iPadOS requires Web Audio to be activated directly inside a user
+    // gesture. Starting a silent buffer here permanently unlocks later tones
+    // fired by the alarm timer while the page remains in the foreground.
+    const silentBuffer = this.audioContext.createBuffer(1, 1, this.audioContext.sampleRate);
+    const silentSource = this.audioContext.createBufferSource();
+    silentSource.buffer = silentBuffer;
+    silentSource.connect(this.audioContext.destination);
+    silentSource.start(0);
+
+    if (this.audioContext.state !== "running") {
+      await this.audioContext.resume();
+    }
+
+    if (this.audioContext.state !== "running") {
+      throw new Error("铃声未获浏览器允许，请确认媒体音量后再次点击“开始闹钟”");
+    }
+  }
+
+  async start(presetName) {
+    this.stop();
+    await this.unlock();
 
     const preset = SOUND_PRESETS[presetName] ?? SOUND_PRESETS.candy;
     preset.play(this);
