@@ -37,11 +37,13 @@ elements.startButton.addEventListener("click", async () => {
     elements.startButton.textContent = "正在准备铃声…";
     soundPlayer.stop();
     alarm?.stop();
-    await soundPlayer.unlock();
+    await soundPlayer.unlock({ playConfirmation: true });
     alarm = createAlarm();
     alarm.start();
     elements.startButton.textContent = "已开始";
     elements.startButton.dataset.active = "true";
+    elements.feedbackText.textContent = "已播放就绪提示音，正在计时";
+    logEvent("铃声已就绪");
     logEvent("任务已启动");
   } catch (error) {
     soundPlayer.stop();
@@ -61,6 +63,14 @@ elements.stopButton.addEventListener("click", () => {
   soundPlayer.stop();
   stopCountdown();
   logEvent("任务已停止");
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && alarm?.getStatus() === AlarmStatus.RUNNING) {
+    soundPlayer.resume().catch(() => {
+      showError("音频已被 iPhone 暂停，请停止后重新点击“开始闹钟”");
+    });
+  }
 });
 
 function createAlarm() {
@@ -234,7 +244,7 @@ class AlarmSoundPlayer {
     this.timers = [];
   }
 
-  async unlock() {
+  async unlock({ playConfirmation = false } = {}) {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
 
     if (!AudioContext) {
@@ -245,30 +255,71 @@ class AlarmSoundPlayer {
       this.audioContext = new AudioContext();
     }
 
-    // iOS/iPadOS requires Web Audio to be activated directly inside a user
-    // gesture. Starting a silent buffer here permanently unlocks later tones
-    // fired by the alarm timer while the page remains in the foreground.
-    const silentBuffer = this.audioContext.createBuffer(1, 1, this.audioContext.sampleRate);
-    const silentSource = this.audioContext.createBufferSource();
-    silentSource.buffer = silentBuffer;
-    silentSource.connect(this.audioContext.destination);
-    silentSource.start(0);
+    this.setPlaybackAudioSession();
 
-    if (this.audioContext.state !== "running") {
-      await this.audioContext.resume();
+    // iOS/iPadOS requires audible Web Audio activation directly inside the
+    // button gesture. A short confirmation tone also lets the user verify the
+    // phone's output before relying on the delayed alarm.
+    if (playConfirmation) {
+      this.playConfirmationTone();
     }
 
+    await this.resume();
+
     if (this.audioContext.state !== "running") {
-      throw new Error("铃声未获浏览器允许，请确认媒体音量后再次点击“开始闹钟”");
+      throw new Error("铃声未获浏览器允许，请关闭静音模式、调高媒体音量后重试");
     }
   }
 
   async start(presetName) {
     this.stop();
-    await this.unlock();
+    await this.resume();
 
     const preset = SOUND_PRESETS[presetName] ?? SOUND_PRESETS.candy;
     preset.play(this);
+  }
+
+  async resume() {
+    if (!this.audioContext) {
+      throw new Error("铃声尚未解锁，请重新点击“开始闹钟”");
+    }
+
+    this.setPlaybackAudioSession();
+
+    if (this.audioContext.state !== "running") {
+      await this.audioContext.resume();
+    }
+  }
+
+  setPlaybackAudioSession() {
+    try {
+      if (navigator.audioSession) {
+        navigator.audioSession.type = "playback";
+      }
+    } catch {
+      // Older iOS versions do not expose AudioSession; the user may need to
+      // turn off the hardware silent switch for Web Audio to be audible.
+    }
+  }
+
+  playConfirmationTone() {
+    const oscillator = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    const now = this.audioContext.currentTime;
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, now);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    oscillator.connect(gain);
+    gain.connect(this.audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.2);
+    oscillator.addEventListener("ended", () => {
+      oscillator.disconnect();
+      gain.disconnect();
+    });
   }
 
   stop() {
